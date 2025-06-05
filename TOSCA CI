@@ -1,0 +1,19 @@
+trigger:
+- main  # or your branch name
+
+pool:
+  name: 'Default'  # Your self-hosted agent pool
+
+steps:
+- task: PowerShell@2
+  displayName: 'Execute Tosca Remote Client Script'
+  inputs:
+    targetType: 'filePath'
+    filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
+    arguments: >
+      -toscaServerUrl "https://tosca.corp.pattersoncompanies.com"
+      -events '["Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY"]'
+      -projectName "Tosca_PattersonAutomation"
+      -clientId "-4m_zGxoBESTvMw7zvlmjg"
+      -clientSecret "8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ"
+      -testCaseName "Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY"
