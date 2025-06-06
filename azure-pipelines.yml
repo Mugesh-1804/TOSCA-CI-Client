@@ -49,8 +49,8 @@ steps:
       $testCase = "$env:testCaseName"
       $buildNumber = $env:BUILD_BUILDNUMBER
 
-      $sourcePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
-      $targetPath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+      $sourcePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
+      $targetPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
 
       if (Test-Path $sourcePath) {
           Copy-Item -Path $sourcePath -Destination $targetPath -Force
@@ -68,7 +68,7 @@ steps:
     script: |
       $testCase = "$env:testCaseName"
       $build = $env:BUILD_BUILDNUMBER
-      $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\${testCase}-$build.html"
+      $uncPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
 
       Write-Host "`n======================================="
       Write-Host " Tosca Report Path (Always Shown):"
