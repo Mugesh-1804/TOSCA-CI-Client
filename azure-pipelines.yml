@@ -3,11 +3,11 @@ trigger: none  # Manual trigger only
 parameters:
   - name: testCaseName
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX'
+    default: 'Enter Testcase Name'
 
   - name: testEvent
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX'
+    default: 'Enter TestEvent Name'
 
 pool:
   name: 'TOSCA CI'
@@ -34,7 +34,27 @@ steps:
       -clientSecret "$(clientSecret)"
       -testCaseName "$(testCaseName)"
 
-# Step 2: Always generate the UNC report path and log it
+# Step 2: Copy the Tosca HTML report to a new filename using Build Number
+- task: PowerShell@2
+  displayName: 'Copy and Rename Tosca Report with Build Number'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $testCase = "$env:testCaseName"
+      $buildNumber = $env:BUILD_BUILDNUMBER
+
+      $sourcePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
+      $targetPath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+
+      if (Test-Path $sourcePath) {
+          Copy-Item -Path $sourcePath -Destination $targetPath -Force
+          Write-Host "✅ Report copied to: $targetPath"
+      } else {
+          Write-Host "⚠️ Source report not found: $sourcePath"
+      }
+
+# Step 3: Always generate the UNC report path and log it
 - task: PowerShell@2
   displayName: 'Generate Tosca Report Path'
   condition: always()
