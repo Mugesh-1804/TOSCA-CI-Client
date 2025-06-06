@@ -1,19 +1,27 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+trigger: none  # manual only
 
-trigger:
-- main
+parameters:
+  - name: testEvent
+    type: string
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
+
+  - name: testCaseName
+    type: string
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
 
 pool:
-  vmImage: ubuntu-latest
+  name: 'TOSCA CI'  # Your agent pool name
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: PowerShell@2
+  displayName: 'Run Dynamic Tosca Test Event'
+  inputs:
+    targetType: 'filePath'
+    filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
+    arguments: >
+      -toscaServerUrl "https://tosca.corp.pattersoncompanies.com"
+      -events '["${{ parameters.testEvent }}"]'
+      -projectName "Tosca_PattersonAutomation"
+      -clientId "-4m_zGxoBESTvMw7zvlmjg"
+      -clientSecret "$(toscaClientSecret)"
+      -testCaseName "${{ parameters.testCaseName }}"
