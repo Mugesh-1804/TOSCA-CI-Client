@@ -3,24 +3,24 @@ trigger: none  # Manual trigger only
 parameters:
   - name: testCaseName
     type: string
-    default: 'Enter_TestCaseName'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
 
   - name: testEvent
     type: string
-    default: 'Enter_TestEventName'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
 
 pool:
-  name: 'TOSCA CI'  # Replace with your agent pool name
+  name: 'TOSCA CI'  # Replace with your pool name
 
 variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '$(toscaClientSecret)'  # Set this as a secret variable in Library
+  clientSecret: '$(toscaClientSecret)'  # Set this in Library > Variable Group
 
 steps:
 
-# Step 1: Run Tosca test via your PowerShell script
+# Step 1: Run Tosca test
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
   inputs:
@@ -28,32 +28,52 @@ steps:
     filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
     arguments: >
       -toscaServerUrl "$(toscaServerUrl)"
-      -events '["${{ parameters.testEvent }}"]'
+      -events '["$(testEvent)"]'
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "${{ parameters.testCaseName }}"
+      -testCaseName "$(testCaseName)"
 
-# Step 2: Always generate the UNC report path and log it
+# Step 2: Copy & rename the Tosca HTML report with build number
+- task: PowerShell@2
+  displayName: 'Copy and Rename Tosca Report with Build Number'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $testCase = "$env:testCaseName"
+      $buildNumber = $env:BUILD_BUILDNUMBER
+
+      $sourcePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
+      $targetPath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+
+      if (Test-Path $sourcePath) {
+          Copy-Item -Path $sourcePath -Destination $targetPath -Force
+          Write-Host "✅ Report copied to: $targetPath"
+      } else {
+          Write-Host "⚠️ Source report not found: $sourcePath"
+      }
+
+# Step 3: Always generate UNC report path markdown
 - task: PowerShell@2
   displayName: 'Generate Tosca Report Path'
   condition: always()
   inputs:
     targetType: 'inline'
     script: |
-      $testCase = "${{ parameters.testCaseName }}"
+      $testCase = "$env:testCaseName"
       $build = $env:BUILD_BUILDNUMBER
       $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\${testCase}-$build.html"
 
       Write-Host "`n======================================="
-      Write-Host " Tosca Report Path (Available Always):"
+      Write-Host " Tosca Report Path (Always Shown):"
       Write-Host " $uncPath"
       Write-Host "=======================================`n"
 
       $markdown = "[Open Tosca Report]($uncPath)"
       Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
 
-# Step 3: Publish the Markdown link to pipeline summary (even on failure)
+# Step 4: Publish the markdown as a pipeline artifact
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca Report Link'
   condition: always()
