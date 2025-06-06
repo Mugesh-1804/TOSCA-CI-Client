@@ -1,26 +1,57 @@
+trigger: none  # manual only
+
+parameters:
+  - name: testEvent
+    type: string
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
+
+  - name: testCaseName
+    type: string
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
+
+pool:
+  name: 'TOSCA CI'  # Your agent pool name
+
+steps:
+- task: PowerShell@2
+  displayName: 'Run Dynamic Tosca Test Event'
+  inputs:
+    targetType: 'filePath'
+    filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
+    arguments: >
+      -toscaServerUrl "https://tosca.corp.pattersoncompanies.com"
+      -events '["${{ parameters.testEvent }}"]'
+      -projectName "Tosca_PattersonAutomation"
+      -clientId "-4m_zGxoBESTvMw7zvlmjg"
+      -clientSecret "$(toscaClientSecret)"
+      -testCaseName "${{ parameters.testCaseName }}"
+	  
+	  
+
+
 trigger: none  # Manual trigger only
 
 parameters:
   - name: testCaseName
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX'
 
   - name: testEvent
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX'
 
 pool:
-  name: 'TOSCA CI'  # Replace with your pool name
+  name: 'TOSCA CI'  # Replace with your agent pool name
 
 variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '$(toscaClientSecret)'  # Set this in Library > Variable Group
+  clientSecret: '$(toscaClientSecret)'  # Set this as a secret variable in Library
 
 steps:
 
-# Step 1: Run Tosca test
+# Step 1: Run Tosca test via your PowerShell script
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
   inputs:
@@ -28,52 +59,32 @@ steps:
     filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
     arguments: >
       -toscaServerUrl "$(toscaServerUrl)"
-      -events '["$(testEvent)"]'
+      -events '["${{ parameters.testEvent }}"]'
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "$(testCaseName)"
+      -testCaseName "${{ parameters.testCaseName }}"
 
-# Step 2: Copy & rename the Tosca HTML report with build number
-- task: PowerShell@2
-  displayName: 'Copy and Rename Tosca Report with Build Number'
-  condition: always()
-  inputs:
-    targetType: 'inline'
-    script: |
-      $testCase = "$env:testCaseName"
-      $buildNumber = $env:BUILD_BUILDNUMBER
-
-      $sourcePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
-      $targetPath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
-
-      if (Test-Path $sourcePath) {
-          Copy-Item -Path $sourcePath -Destination $targetPath -Force
-          Write-Host "✅ Report copied to: $targetPath"
-      } else {
-          Write-Host "⚠️ Source report not found: $sourcePath"
-      }
-
-# Step 3: Always generate UNC report path markdown
+# Step 2: Always generate the UNC report path and log it
 - task: PowerShell@2
   displayName: 'Generate Tosca Report Path'
   condition: always()
   inputs:
     targetType: 'inline'
     script: |
-      $testCase = "$env:testCaseName"
+      $testCase = "${{ parameters.testCaseName }}"
       $build = $env:BUILD_BUILDNUMBER
       $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\${testCase}-$build.html"
 
       Write-Host "`n======================================="
-      Write-Host " Tosca Report Path (Always Shown):"
+      Write-Host " Tosca Report Path (Available Always):"
       Write-Host " $uncPath"
       Write-Host "=======================================`n"
 
       $markdown = "[Open Tosca Report]($uncPath)"
       Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
 
-# Step 4: Publish the markdown as a pipeline artifact
+# Step 3: Publish the Markdown link to pipeline summary (even on failure)
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca Report Link'
   condition: always()
