@@ -1,26 +1,31 @@
 trigger: none  # Manual trigger only
 
+# Step 1: Accept user input at runtime
 parameters:
   - name: testCaseName
     type: string
-    default: 'Enter Testcase Name'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
 
   - name: testEvent
     type: string
-    default: 'Enter TestEvent Name'
+    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
 
-pool:
-  name: 'TOSCA CI'
-
+# Step 2: Map parameters to variables for runtime use
 variables:
+  testCaseName: ${{ parameters.testCaseName }}
+  testEvent: ${{ parameters.testEvent }}
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '$(toscaClientSecret)'  # from Library
+  clientSecret: '$(toscaClientSecret)'  # From variable group (secret)
+
+# Step 3: Use a self-hosted Tosca agent pool
+pool:
+  name: 'TOSCA CI'
 
 steps:
 
-# Step 1: Run Tosca test via your PowerShell script
+# Step 4: Run the Tosca test
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
   inputs:
@@ -34,7 +39,7 @@ steps:
       -clientSecret "$(clientSecret)"
       -testCaseName "$(testCaseName)"
 
-# Step 2: Copy the Tosca HTML report to a new filename using Build Number
+# Step 5: Rename Tosca report with build number
 - task: PowerShell@2
   displayName: 'Copy and Rename Tosca Report with Build Number'
   condition: always()
@@ -51,10 +56,10 @@ steps:
           Copy-Item -Path $sourcePath -Destination $targetPath -Force
           Write-Host "✅ Report copied to: $targetPath"
       } else {
-          Write-Host "⚠️ Source report not found: $sourcePath"
+          Write-Host "⚠️ Report not found at: $sourcePath"
       }
 
-# Step 3: Always generate the UNC report path and log it
+# Step 6: Generate UNC report link and save as Markdown
 - task: PowerShell@2
   displayName: 'Generate Tosca Report Path'
   condition: always()
@@ -73,7 +78,7 @@ steps:
       $markdown = "[Open Tosca Report]($uncPath)"
       Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
 
-# Step 3: Publish the Markdown file as a pipeline artifact
+# Step 7: Publish the Markdown file as a pipeline artifact
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca Report Link'
   condition: always()
