@@ -1,31 +1,3 @@
-trigger: none  # manual only
-
-parameters:
-  - name: testEvent
-    type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
-
-  - name: testCaseName
-    type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'
-
-pool:
-  name: 'TOSCA CI'  # Your agent pool name
-
-steps:
-- task: PowerShell@2
-  displayName: 'Run Dynamic Tosca Test Event'
-  inputs:
-    targetType: 'filePath'
-    filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
-    arguments: >
-      -toscaServerUrl "https://tosca.corp.pattersoncompanies.com"
-      -events '["${{ parameters.testEvent }}"]'
-      -projectName "Tosca_PattersonAutomation"
-      -clientId "-4m_zGxoBESTvMw7zvlmjg"
-      -clientSecret "$(toscaClientSecret)"
-      -testCaseName "${{ parameters.testCaseName }}"
-      
 trigger: none  # Manual trigger only
 
 parameters:
@@ -38,13 +10,13 @@ parameters:
     default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX'
 
 pool:
-  name: 'TOSCA CI'  # Replace with your agent pool name
+  name: 'TOSCA CI'
 
 variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '$(toscaClientSecret)'  # Set this as a secret variable in Library
+  clientSecret: '$(toscaClientSecret)'  # from Library
 
 steps:
 
@@ -56,11 +28,11 @@ steps:
     filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
     arguments: >
       -toscaServerUrl "$(toscaServerUrl)"
-      -events '["${{ parameters.testEvent }}"]'
+      -events '["$(testEvent)"]'
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "${{ parameters.testCaseName }}"
+      -testCaseName "$(testCaseName)"
 
 # Step 2: Always generate the UNC report path and log it
 - task: PowerShell@2
@@ -69,19 +41,19 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      $testCase = "${{ parameters.testCaseName }}"
+      $testCase = "$env:testCaseName"
       $build = $env:BUILD_BUILDNUMBER
       $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\${testCase}-$build.html"
 
       Write-Host "`n======================================="
-      Write-Host " Tosca Report Path (Available Always):"
+      Write-Host " Tosca Report Path (Always Shown):"
       Write-Host " $uncPath"
       Write-Host "=======================================`n"
 
       $markdown = "[Open Tosca Report]($uncPath)"
       Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
 
-# Step 3: Publish the Markdown link to pipeline summary (even on failure)
+# Step 3: Publish the Markdown file as a pipeline artifact
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca Report Link'
   condition: always()
