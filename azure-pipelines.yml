@@ -25,10 +25,7 @@ steps:
       -clientId "-4m_zGxoBESTvMw7zvlmjg"
       -clientSecret "$(toscaClientSecret)"
       -testCaseName "${{ parameters.testCaseName }}"
-	  
-	  
-
-
+      
 trigger: none  # Manual trigger only
 
 parameters:
