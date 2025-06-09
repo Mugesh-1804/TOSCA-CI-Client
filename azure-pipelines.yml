@@ -1,5 +1,5 @@
 trigger: none  # Manual trigger only
-
+timeoutInMinutes: 240
 # Step 1: Accept user input at runtime
 parameters:
   - name: testCaseName
