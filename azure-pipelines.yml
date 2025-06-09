@@ -57,6 +57,14 @@ steps:
 
       Remove-PSDrive -Name "Z"
 
+- task: PowerShell@2
+  displayName: 'Wait for 20 seconds'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Waiting for 20 seconds..."
+      Start-Sleep -Seconds 20
+
 # Step 3: Analyze Tosca Execution XML
 - task: PowerShell@2
   displayName: 'Analyze Tosca Execution XML'
@@ -71,7 +79,7 @@ steps:
       $networkBasePath       = '\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons'
       $buildNumber           = $env:BUILD_BUILDNUMBER
       $passResultPath        = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
-
+      Write-Host "$reportFolder"
       # === Find Execution-ID in build log ===
       $logPath     = "$(Agent.TempDirectory)\buildlog.txt"
       $executionId = $null
