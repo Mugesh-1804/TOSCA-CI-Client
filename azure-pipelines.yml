@@ -79,10 +79,11 @@ steps:
       $networkBasePath       = '\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons'
       $buildNumber           = $env:BUILD_BUILDNUMBER
       $passResultPath        = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
-      Write-Host "$reportFolder"
-      # === Find Execution-ID in build log ===
-      $logPath     = "$(Agent.TempDirectory)\buildlog.txt"
+
+      Write-Host "📁 Looking for Execution-ID in build log..."
+      $logPath = "$(Agent.TempDirectory)\buildlog.txt"
       $executionId = $null
+
       if (Test-Path $logPath) {
         foreach ($line in Get-Content $logPath) {
           if ($line -match 'Successfully enqueued execution with id "(.*?)"') {
@@ -92,41 +93,46 @@ steps:
       }
 
       if (-not $executionId) {
-        Write-Host '❌ Execution-ID not found in logs.'; return
+        Write-Host "❌ Execution-ID not found in log."; exit 1
       }
+
       Write-Host "✅ Execution-ID found: $executionId"
 
-      # === Locate matching XML file ===
-      $xmlFile = Get-ChildItem $reportFolder -Filter "*$executionId*_results.xml" | Select-Object -First 1
-      if (-not $xmlFile) {
-        Write-Host '❌ Matching XML not found.'; return
-      }
-      Write-Host "✅ XML: $($xmlFile.FullName)"
+      # === Locate XML file for the Execution-ID ===
+      $xmlFile = Get-ChildItem -Path $reportFolder -Filter "*$executionId*_results.xml" | Select-Object -First 1
 
+      if (-not $xmlFile) {
+        Write-Host "❌ XML file for Execution-ID '$executionId' not found."; exit 1
+      }
+
+      Write-Host "✅ XML file located: $($xmlFile.FullName)"
+
+      # === Parse XML and locate testcase ===
       [xml]$xml = Get-Content $xmlFile.FullName
-      $tcNode   = $xml.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
+      $tcNode  = $xml.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
 
       if (-not $tcNode) {
-        Write-Host "❌ Test case '$targetTestCaseName' not in XML."; return
+        Write-Host "❌ Test case '$targetTestCaseName' not found in XML."; exit 1
       }
 
       $hasFailure = $tcNode.failure -ne $null
       $hasError   = $tcNode.error   -ne $null
 
       if ($hasFailure -or $hasError) {
-
         Write-Host "❌ Test case '$targetTestCaseName' FAILED."
 
-        # --- create failure directory ---
+        # === Create output folder if not exists ===
         $failDir = Join-Path $failureOutputBasePath $targetTestCaseName
         if (-not (Test-Path $failDir)) { New-Item $failDir -ItemType Directory | Out-Null }
 
-        # --- copy XML ---
-        Copy-Item $xmlFile.FullName (Join-Path $failDir $xmlFile.Name) -Force
+        # === Copy original XML ===
+        Copy-Item $xmlFile.FullName -Destination (Join-Path $failDir $xmlFile.Name) -Force
 
-        # --- extract message & save .txt ---
+        # === Extract failure message ===
         $msg = if ($hasFailure) { $tcNode.failure.InnerText.Trim() } elseif ($hasError) { $tcNode.error.InnerText.Trim() } else { 'Unknown failure' }
-        $txtName = $xmlFile.Name.Replace('.xml','.txt')
+
+        # === Write .txt file ===
+        $txtName = $xmlFile.Name.Replace('.xml', '.txt')
         $txtPath = Join-Path $failDir $txtName
 
         $lines = @(
@@ -134,21 +140,21 @@ steps:
           "BuildNumber : $buildNumber",
           "",
           "Failure Reason:",
-          "$msg"
+          $msg
         )
         $lines | Set-Content -Path $txtPath
 
         $uncTxt = "$networkBasePath\$targetTestCaseName\$txtName"
-        Write-Host "📄 Failure log saved. UNC link: $uncTxt"
+        Write-Host "📄 Failure reason saved: $uncTxt"
 
-        # OPTIONAL: uncomment the next line to fail the pipeline on Tosca failure
+        # ❗ Fail pipeline
         exit 1
       }
       else {
         Write-Host "✅ Test case '$targetTestCaseName' PASSED."
         Write-Host "📄 Result HTML: $passResultPath"
+        exit 0
       }
-
 
 # Step 4: Publish Report Link Markdown
 - task: PublishPipelineArtifact@1
