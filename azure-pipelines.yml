@@ -72,7 +72,6 @@ steps:
   inputs:
     targetType: inline
     script: |
-      # === CONFIGURATION ===
       $reportFolder          = 'C:\tmp\ExecutionClients\results'
       $targetTestCaseName    = '$(testCaseName)'
       $failureOutputBasePath = '\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons'
@@ -83,7 +82,6 @@ steps:
       Write-Host "📁 Scanning XML files in: $reportFolder"
       Write-Host "🔍 Target test case: $targetTestCaseName"
 
-      # === Find the newest XML that contains the testcase ===
       $xmlFile = Get-ChildItem -Path $reportFolder -Filter "*_results.xml" |
                  Sort-Object LastWriteTime -Descending |
                  Where-Object {
@@ -101,7 +99,6 @@ steps:
 
       Write-Host "✅ Using XML: $($xmlFile.FullName)"
 
-      # === Parse XML and evaluate result ===
       [xml]$xml = Get-Content $xmlFile.FullName
       $tcNode   = $xml.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
 
@@ -116,15 +113,19 @@ steps:
       if ($hasFailure -or $hasError) {
         Write-Host "❌ Test case '$targetTestCaseName' FAILED."
 
-        # --- create failure directory ---
         $failDir = Join-Path $failureOutputBasePath $targetTestCaseName
         if (-not (Test-Path $failDir)) { New-Item $failDir -ItemType Directory | Out-Null }
 
-        # --- copy XML for reference ---
         Copy-Item $xmlFile.FullName -Destination (Join-Path $failDir $xmlFile.Name) -Force
 
-        # --- extract message & save .txt ---
-        $msg     = ($hasFailure ? $tcNode.failure.InnerText.Trim() : $tcNode.error.InnerText.Trim())
+        if ($hasFailure) {
+          $msg = $tcNode.failure.InnerText.Trim()
+        } elseif ($hasError) {
+          $msg = $tcNode.error.InnerText.Trim()
+        } else {
+          $msg = 'Unknown failure'
+        }
+
         $txtName = $xmlFile.Name.Replace('.xml', '.txt')
         $txtPath = Join-Path $failDir $txtName
 
@@ -140,7 +141,7 @@ steps:
         Write-Host "📄 Failure details saved at: $txtPath"
         Write-Host "🔗 UNC link: $networkBasePath\$targetTestCaseName\$txtName"
 
-        exit 1   # Fail the task/pipeline when the testcase fails
+        exit 1
       }
       else {
         Write-Host "✅ Test case '$targetTestCaseName' PASSED."
