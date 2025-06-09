@@ -8,8 +8,8 @@ variables:
   # Define additional variables
   testCaseName: '$(TestCaseName)'  # Reference to pipeline-level or runtime variables
   testEvent: '$(TestEventName)'  # Reference to pipeline-level or runtime variables
-  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
-  projectName: 'Tosca_PattersonAutomation'
+  toscaServerUrl: '$(toscaServerUrl)'
+  projectName: '$(projectName)'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
   shareUsername: '$(shareUsername)'
   sharePassword: '$(sharePassword)'
