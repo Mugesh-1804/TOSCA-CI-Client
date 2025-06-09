@@ -81,7 +81,7 @@ steps:
       $passResultPath        = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
 
       Write-Host "📁 Looking for Execution-ID in build log..."
-      $logPath = "$(Agent.TempDirectory)\buildlog.txt"
+      $logPath = "$reportFolder\$executionId_results.xml"
       $executionId = $null
 
       if (Test-Path $logPath) {
