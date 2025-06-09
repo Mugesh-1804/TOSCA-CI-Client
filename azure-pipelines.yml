@@ -10,7 +10,9 @@ parameters:
     default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'  # Default value
 
 variables:
-  - group: ToscaSecrets  # Import secrets from variable group
+  # Import secrets from variable group
+  - group: ToscaSecrets
+  # Define variables
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
