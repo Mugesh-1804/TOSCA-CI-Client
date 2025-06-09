@@ -1,5 +1,8 @@
 trigger: none  # Manual trigger only
 
+variables:
+  - group: ToscaSecrets
+  
 # Step 1: Accept user input at runtime
 parameters:
   - name: testCaseName
