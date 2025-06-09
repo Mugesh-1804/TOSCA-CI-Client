@@ -4,7 +4,6 @@ trigger: none  # Manual trigger only
 
 # Step 2: Map parameters to variables for runtime use
 variables:
-  testEvent: ${{ parameters.testEvent }}
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
@@ -25,7 +24,7 @@ steps:
     filePath: 'C:\\tmp\\ExecutionClients\\tosca_execution_clientNew.ps1'
     arguments: >
       -toscaServerUrl "$(toscaServerUrl)"
-      -events '["$(testEvent)"]'
+      -events '["$(testEventName)"]'
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
