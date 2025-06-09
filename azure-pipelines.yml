@@ -1,18 +1,9 @@
 trigger: none  # Manual trigger only
 
 # Step 1: Accept user input at runtime
-parameters:
-  - name: testCaseName
-    type: string
-    
-
-  - name: testEvent
-    type: string
-    default: '$(TestEventName)'
 
 # Step 2: Map parameters to variables for runtime use
 variables:
-  testCaseName: ${{ parameters.testCaseName }}
   testEvent: ${{ parameters.testEvent }}
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
@@ -38,7 +29,7 @@ steps:
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "$(testCase)"
+      -testCaseName "$(testCaseName)"
 
 # Step 5: Rename Tosca report with build number
 - task: PowerShell@2
