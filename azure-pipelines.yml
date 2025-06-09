@@ -11,6 +11,8 @@ variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
+  shareUsername: '$(shareUsername)'
+  sharePassword: '$(sharePassword)'
   clientSecret: '$(toscaClientSecret)'  # Using the secret from the variable group
 
 # Step 2: Accept user input at runtime (parameters)
