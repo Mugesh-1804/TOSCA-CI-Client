@@ -30,39 +30,103 @@ steps:
       -clientSecret "$(clientSecret)"
       -testCaseName "$(testCaseName)"
 
-# Step 5: Rename Tosca report with build number
+# Step 5: Analyze Tosca XML Results
 - task: PowerShell@2
-  displayName: 'Copy and Rename Tosca Report with Build Number'
+  displayName: 'Analyze Tosca Execution XML'
   condition: always()
   inputs:
     targetType: 'inline'
     script: |
-      $username = "$(shareUsername)"
-      $password = "$(sharePassword)" | ConvertTo-SecureString -AsPlainText -Force
-      $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
+      import jenkins.model.*
+      import hudson.model.*
+      import groovy.util.XmlSlurper
+      import java.nio.file.Files
+      import java.nio.file.StandardCopyOption
 
-      $testCase = "$env:testCaseName"
-      $buildNumber = $env:BUILD_BUILDNUMBER
+      def build = Thread.currentThread().executable
+      def buildNumber = build.getNumber()
 
-      $networkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
-      $sourceRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
-      $targetRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+      def reportFolder = new File("C:\\tmp\\ExecutionClients\\results")
+      def targetTestCaseName = "Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY"
+      def failureOutputBasePath = "D:\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\FailureReasons"
+      def networkBasePath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\FailureReasons"
+      def passResultPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\${targetTestCaseName}\\${targetTestCaseName}-${buildNumber}.html"
 
-      # Map a drive temporarily
-      New-PSDrive -Name "Z" -PSProvider FileSystem -Root $networkPath -Credential $credential -Persist
+      def logLines = build.getLog(1000)
+      def executionId = null
+      def pattern = ~/Successfully enqueued execution with id "(.*?)"/
+      logLines.each { line ->
+          def matcher = pattern.matcher(line)
+          if (matcher.find()) {
+              executionId = matcher.group(1)
+              return
+          }
+      }
+      if (!executionId) {
+          throw new RuntimeException("❌ Could not find execution ID in the logs.")
+      }
+      println "✅ Execution ID found: ${executionId}"
 
-      $sourcePath = "Z:\$sourceRelPath"
-      $targetPath = "Z:\$targetRelPath"
+      def xmlFile = reportFolder.listFiles()?.find {
+          it.name.toLowerCase().contains(executionId.toLowerCase()) && it.name.endsWith("_results.xml")
+      }
+      if (!xmlFile) {
+          throw new RuntimeException("❌ XML result not found for Execution ID: ${executionId}")
+      }
+      println "✅ Found XML report: ${xmlFile.absolutePath}"
 
-      if (Test-Path $sourcePath) {
-          Copy-Item -Path $sourcePath -Destination $targetPath -Force
-          Write-Host "✅ Report copied to: $targetPath"
-      } else {
-          Write-Host "⚠️ Report not found at: $sourcePath"
+      def xml = new XmlSlurper().parse(xmlFile)
+      def targetTestCase = xml.'**'.find {
+          it.name() == 'testcase' && it.@name == targetTestCaseName
+      }
+      if (!targetTestCase) {
+          throw new RuntimeException("❌ Test case '${targetTestCaseName}' not found in results.")
       }
 
-      # Clean up
-      Remove-PSDrive -Name "Z"
+      def hasFailure = targetTestCase.failure.size() > 0
+      def hasError = targetTestCase.error.size() > 0
+
+      if (hasFailure || hasError) {
+          println "❌ Test case '${targetTestCaseName}' FAILED."
+          build.setResult(hudson.model.Result.FAILURE)
+
+          def testCaseFailureDir = new File("${failureOutputBasePath}\\${targetTestCaseName}")
+          if (!testCaseFailureDir.exists()) {
+              testCaseFailureDir.mkdirs()
+          }
+
+          def targetXmlPath = new File(testCaseFailureDir, xmlFile.name)
+          Files.copy(xmlFile.toPath(), targetXmlPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+          println "📄 XML copied to: ${targetXmlPath.absolutePath}"
+
+          def failureText = ""
+          if (hasFailure) {
+              failureText = targetTestCase.failure[0].text().trim()
+          } else if (hasError) {
+              failureText = targetTestCase.error[0].text().trim()
+          } else {
+              failureText = "Unknown failure"
+          }
+
+          def txtFile = new File(testCaseFailureDir, xmlFile.name.replace(".xml", ".txt"))
+          txtFile.withWriter { writer ->
+              writer.write("TestCaseName: ${targetTestCaseName}\n")
+              writer.write("BuildNumber: ${buildNumber}\n\n")
+              writer.write("Failure Reason:\n${failureText}")
+          }
+          println "📄 TXT copy saved to: ${txtFile.absolutePath}"
+
+          def rawTxtPath = "${networkBasePath}\\${targetTestCaseName}\\${txtFile.name}"
+          def linkHtml = "📄 <a href='${rawTxtPath}'>Click here to View Failure Result</a>"
+
+          println "\n${linkHtml}\n"
+          throw new RuntimeException("❌ Test case '${targetTestCaseName}' failed.")
+      } else {
+          println "✅ Test case '${targetTestCaseName}' PASSED."
+
+          def linkHtml = "📄 <a href='${passResultPath}'>Click here for Result</a>"
+          println "\n📄 View Result HTML: ${passResultPath}\n"
+      }
 
 # Step 6: Generate UNC report link and save as Markdown
 - task: PowerShell@2
@@ -73,7 +137,7 @@ steps:
     script: |
       $testCase = "$env:testCaseName"
       $build = $env:BUILD_BUILDNUMBER
-      $uncPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+      $uncPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$build.html"
 
       Write-Host "`n======================================="
       Write-Host " Tosca Report Path (Always Shown):"
