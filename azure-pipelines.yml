@@ -149,7 +149,34 @@ steps:
         exit 0
       }
 
-# Step 4: Publish Report Link Markdown
+# Step 4: Generate TOSCA Report Markdown
+- task: PowerShell@2
+  displayName: 'Generate Tosca Report Markdown'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $mdDir = "$(Build.ArtifactStagingDirectory)"
+      if (-not (Test-Path $mdDir)) {
+        New-Item -ItemType Directory -Path $mdDir | Out-Null
+      }
+
+      $mdPath = Join-Path $mdDir "ToscaReport.md"
+      $testCase = "$(testCaseName)"
+      $buildNum = "$(Build.BuildNumber)"
+      $resultLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
+      
+      @"
+## Tosca Test Case Result
+
+- **Test Case:** $testCase  
+- **Build Number:** $buildNum  
+- **Result Link:** [$testCase Report]($resultLink)
+"@ | Set-Content -Path $mdPath
+
+      Write-Host "✅ Markdown file created at $mdPath"
+
+# Step 5: Publish Report Link Markdown
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca Report Link'
   condition: always()
