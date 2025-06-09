@@ -1,21 +1,17 @@
 trigger: none  # Manual trigger only
 
-# Step 1: Accept user input at runtime
-
-# Step 2: Map parameters to variables for runtime use
 variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
   clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
 
-# Step 3: Use a self-hosted Tosca agent pool
 pool:
   name: 'TOSCA CI'
 
 steps:
 
-# Step 4: Run the Tosca test
+# Step 1: Run the Tosca Test Event
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
   timeoutInMinutes: 240
@@ -30,126 +26,113 @@ steps:
       -clientSecret "$(clientSecret)"
       -testCaseName "$(testCaseName)"
 
-# Step 5: Analyze Tosca XML Results
+# Step 2: Copy and Rename Tosca HTML Report with Build Number
+- task: PowerShell@2
+  displayName: 'Copy & Rename Tosca HTML Report'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $username = "$(shareUsername)"
+      $password = "$(sharePassword)" | ConvertTo-SecureString -AsPlainText -Force
+      $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
+
+      $testCase = "$(testCaseName)"
+      $buildNumber = $env:BUILD_BUILDNUMBER
+
+      $networkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
+      $sourceRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
+      $targetRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+
+      New-PSDrive -Name "Z" -PSProvider FileSystem -Root $networkPath -Credential $credential -Persist
+
+      $sourcePath = "Z:\$sourceRelPath"
+      $targetPath = "Z:\$targetRelPath"
+
+      if (Test-Path $sourcePath) {
+          Copy-Item -Path $sourcePath -Destination $targetPath -Force
+          Write-Host "✅ Report copied to: $targetPath"
+      } else {
+          Write-Host "⚠️ Report not found at: $sourcePath"
+      }
+
+      Remove-PSDrive -Name "Z"
+
+# Step 3: Analyze Tosca XML and Handle Failure
 - task: PowerShell@2
   displayName: 'Analyze Tosca Execution XML'
   condition: always()
   inputs:
     targetType: 'inline'
     script: |
-      import jenkins.model.*
-      import hudson.model.*
-      import groovy.util.XmlSlurper
-      import java.nio.file.Files
-      import java.nio.file.StandardCopyOption
+      $reportFolder = "C:\tmp\ExecutionClients\results"
+      $targetTestCaseName = "$(testCaseName)"
+      $buildNumber = $env:BUILD_BUILDNUMBER
+      $failureOutputBasePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
+      $networkBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
+      $passResultPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
 
-      def build = Thread.currentThread().executable
-      def buildNumber = build.getNumber()
+      $xmlFiles = Get-ChildItem -Path $reportFolder -Filter "*_results.xml"
+      $xmlFile = $xmlFiles | Where-Object { (Get-Content $_.FullName) -match $targetTestCaseName } | Select-Object -First 1
 
-      def reportFolder = new File("C:\\tmp\\ExecutionClients\\results")
-      def targetTestCaseName = "Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY"
-      def failureOutputBasePath = "D:\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\FailureReasons"
-      def networkBasePath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\FailureReasons"
-      def passResultPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\${targetTestCaseName}\\${targetTestCaseName}-${buildNumber}.html"
-
-      def logLines = build.getLog(1000)
-      def executionId = null
-      def pattern = ~/Successfully enqueued execution with id "(.*?)"/
-      logLines.each { line ->
-          def matcher = pattern.matcher(line)
-          if (matcher.find()) {
-              executionId = matcher.group(1)
-              return
-          }
-      }
-      if (!executionId) {
-          throw new RuntimeException("❌ Could not find execution ID in the logs.")
-      }
-      println "✅ Execution ID found: ${executionId}"
-
-      def xmlFile = reportFolder.listFiles()?.find {
-          it.name.toLowerCase().contains(executionId.toLowerCase()) && it.name.endsWith("_results.xml")
-      }
-      if (!xmlFile) {
-          throw new RuntimeException("❌ XML result not found for Execution ID: ${executionId}")
-      }
-      println "✅ Found XML report: ${xmlFile.absolutePath}"
-
-      def xml = new XmlSlurper().parse(xmlFile)
-      def targetTestCase = xml.'**'.find {
-          it.name() == 'testcase' && it.@name == targetTestCaseName
-      }
-      if (!targetTestCase) {
-          throw new RuntimeException("❌ Test case '${targetTestCaseName}' not found in results.")
+      if (-not $xmlFile) {
+          Write-Host "❌ No matching XML file found in $reportFolder for '$targetTestCaseName'"
+          exit 1
       }
 
-      def hasFailure = targetTestCase.failure.size() > 0
-      def hasError = targetTestCase.error.size() > 0
+      [xml]$xml = Get-Content $xmlFile.FullName
+      $testCaseNode = $xml.SelectSingleNode("//testcase[@name='$targetTestCaseName']")
 
-      if (hasFailure || hasError) {
-          println "❌ Test case '${targetTestCaseName}' FAILED."
-          build.setResult(hudson.model.Result.FAILURE)
+      if (-not $testCaseNode) {
+          Write-Host "❌ Test case '$targetTestCaseName' not found in XML."
+          exit 1
+      }
 
-          def testCaseFailureDir = new File("${failureOutputBasePath}\\${targetTestCaseName}")
-          if (!testCaseFailureDir.exists()) {
-              testCaseFailureDir.mkdirs()
+      $hasFailure = $testCaseNode.failure
+      $hasError = $testCaseNode.error
+
+      if ($hasFailure -or $hasError) {
+          Write-Host "❌ Test case '$targetTestCaseName' FAILED."
+
+          $failureDir = Join-Path $failureOutputBasePath $targetTestCaseName
+          if (-not (Test-Path $failureDir)) {
+              New-Item -Path $failureDir -ItemType Directory | Out-Null
           }
 
-          def targetXmlPath = new File(testCaseFailureDir, xmlFile.name)
-          Files.copy(xmlFile.toPath(), targetXmlPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-          println "📄 XML copied to: ${targetXmlPath.absolutePath}"
+          $xmlCopyPath = Join-Path $failureDir $xmlFile.Name
+          Copy-Item -Path $xmlFile.FullName -Destination $xmlCopyPath -Force
 
-          def failureText = ""
-          if (hasFailure) {
-              failureText = targetTestCase.failure[0].text().trim()
-          } else if (hasError) {
-              failureText = targetTestCase.error[0].text().trim()
-          } else {
-              failureText = "Unknown failure"
-          }
+          $failureText = ""
+          if ($hasFailure) { $failureText = $testCaseNode.failure.InnerText.Trim() }
+          elseif ($hasError) { $failureText = $testCaseNode.error.InnerText.Trim() }
+          else { $failureText = "Unknown failure" }
 
-          def txtFile = new File(testCaseFailureDir, xmlFile.name.replace(".xml", ".txt"))
-          txtFile.withWriter { writer ->
-              writer.write("TestCaseName: ${targetTestCaseName}\n")
-              writer.write("BuildNumber: ${buildNumber}\n\n")
-              writer.write("Failure Reason:\n${failureText}")
-          }
-          println "📄 TXT copy saved to: ${txtFile.absolutePath}"
+          $txtFile = $xmlFile.Name.Replace(".xml", ".txt")
+          $txtPath = Join-Path $failureDir $txtFile
 
-          def rawTxtPath = "${networkBasePath}\\${targetTestCaseName}\\${txtFile.name}"
-          def linkHtml = "📄 <a href='${rawTxtPath}'>Click here to View Failure Result</a>"
+          $output = @"
+TestCaseName: $targetTestCaseName
+BuildNumber: $buildNumber
 
-          println "\n${linkHtml}\n"
-          throw new RuntimeException("❌ Test case '${targetTestCaseName}' failed.")
-      } else {
-          println "✅ Test case '${targetTestCaseName}' PASSED."
+Failure Reason:
+$failureText
+"@
 
-          def linkHtml = "📄 <a href='${passResultPath}'>Click here for Result</a>"
-          println "\n📄 View Result HTML: ${passResultPath}\n"
+          $output | Set-Content -Path $txtPath
+
+          $uncTxtPath = "$networkBasePath\$targetTestCaseName\$txtFile"
+          $markdown = "[View Failure Reason]($uncTxtPath)"
+          Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
+      }
+      else {
+          Write-Host "✅ Test case '$targetTestCaseName' PASSED."
+          $markdown = "[Open Tosca Report]($passResultPath)"
+          Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
       }
 
-# Step 6: Generate UNC report link and save as Markdown
-- task: PowerShell@2
-  displayName: 'Generate Tosca Report Path'
-  condition: always()
-  inputs:
-    targetType: 'inline'
-    script: |
-      $testCase = "$env:testCaseName"
-      $build = $env:BUILD_BUILDNUMBER
-      $uncPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$build.html"
-
-      Write-Host "`n======================================="
-      Write-Host " Tosca Report Path (Always Shown):"
-      Write-Host " $uncPath"
-      Write-Host "=======================================`n"
-
-      $markdown = "[Open Tosca Report]($uncPath)"
-      Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
-
-# Step 7: Publish the Markdown file as a pipeline artifact
+# Step 4: Publish Markdown Report Link
 - task: PublishPipelineArtifact@1
-  displayName: 'Publish Tosca Report Link'
+  displayName: 'Publish Tosca Report Markdown'
   condition: always()
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)\ToscaReport.md'
