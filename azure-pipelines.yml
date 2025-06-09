@@ -67,7 +67,7 @@ steps:
       $reportFolder = "C:\tmp\ExecutionClients\results"
       $targetTestCaseName = "$(testCaseName)"
       $buildNumber = $env:BUILD_BUILDNUMBER
-      $failureOutputBasePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
+      $failureOutputBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
       $networkBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
       $passResultPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
 
