@@ -2,8 +2,8 @@ trigger: none  # Manual trigger only
 
 variables:
   - group: ToscaSecrets
-  testCaseName: ${testCaseName}
-  testEvent: ${testEventName}
+  testCaseName: '${testCaseName}'
+  testEvent: '${testEventName}'
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
