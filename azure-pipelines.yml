@@ -172,7 +172,10 @@ steps:
 - **Test Case:** $testCase  
 - **Build Number:** $buildNum  
 - **Result Link:** [$testCase Report]($resultLink)
-"@ | Set-Content -Path $mdPath
+"@
+
+      # Write markdown to file
+      $markdown | Set-Content -Path $mdPath -Encoding UTF8
 
       Write-Host "✅ Markdown file created at $mdPath"
 
