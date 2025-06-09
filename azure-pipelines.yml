@@ -67,10 +67,10 @@ steps:
 
 # Step 3: Analyze Tosca Execution XML
 - task: PowerShell@2
-  displayName: 'Analyze Tosca Execution XML'
+  displayName: Analyze Tosca Execution XML
   condition: always()
   inputs:
-    targetType: 'inline'
+    targetType: inline
     script: |
       # === CONFIGURATION ===
       $reportFolder          = 'C:\tmp\ExecutionClients\results'
@@ -80,39 +80,34 @@ steps:
       $buildNumber           = $env:BUILD_BUILDNUMBER
       $passResultPath        = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
 
-      Write-Host "📁 Looking for Execution-ID in build log..."
-      $logPath = "$reportFolder\$executionId_results.xml"
-      $executionId = $null
+      Write-Host "📁 Scanning XML files in: $reportFolder"
+      Write-Host "🔍 Target test case: $targetTestCaseName"
 
-      if (Test-Path $logPath) {
-        foreach ($line in Get-Content $logPath) {
-          if ($line -match 'Successfully enqueued execution with id "(.*?)"') {
-            $executionId = $matches[1]; break
-          }
-        }
-      }
-
-      if (-not $executionId) {
-        Write-Host "❌ Execution-ID not found in log."; exit 1
-      }
-
-      Write-Host "✅ Execution-ID found: $executionId"
-
-      # === Locate XML file for the Execution-ID ===
-      $xmlFile = Get-ChildItem -Path $reportFolder -Filter "*$executionId*_results.xml" | Select-Object -First 1
+      # === Find the newest XML that contains the testcase ===
+      $xmlFile = Get-ChildItem -Path $reportFolder -Filter "*_results.xml" |
+                 Sort-Object LastWriteTime -Descending |
+                 Where-Object {
+                   try {
+                     [xml]$tmp = Get-Content $_.FullName -ErrorAction Stop
+                     $tmp.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
+                   } catch { $false }
+                 } |
+                 Select-Object -First 1
 
       if (-not $xmlFile) {
-        Write-Host "❌ XML file for Execution-ID '$executionId' not found."; exit 1
+        Write-Host "❌ No XML in '$reportFolder' contains test-case '$targetTestCaseName'."
+        exit 1
       }
 
-      Write-Host "✅ XML file located: $($xmlFile.FullName)"
+      Write-Host "✅ Using XML: $($xmlFile.FullName)"
 
-      # === Parse XML and locate testcase ===
+      # === Parse XML and evaluate result ===
       [xml]$xml = Get-Content $xmlFile.FullName
-      $tcNode  = $xml.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
+      $tcNode   = $xml.SelectNodes('//testcase') | Where-Object { $_.name -eq $targetTestCaseName }
 
       if (-not $tcNode) {
-        Write-Host "❌ Test case '$targetTestCaseName' not found in XML."; exit 1
+        Write-Host "❌ Test case '$targetTestCaseName' not found (unexpected)."
+        exit 1
       }
 
       $hasFailure = $tcNode.failure -ne $null
@@ -121,17 +116,15 @@ steps:
       if ($hasFailure -or $hasError) {
         Write-Host "❌ Test case '$targetTestCaseName' FAILED."
 
-        # === Create output folder if not exists ===
+        # --- create failure directory ---
         $failDir = Join-Path $failureOutputBasePath $targetTestCaseName
         if (-not (Test-Path $failDir)) { New-Item $failDir -ItemType Directory | Out-Null }
 
-        # === Copy original XML ===
+        # --- copy XML for reference ---
         Copy-Item $xmlFile.FullName -Destination (Join-Path $failDir $xmlFile.Name) -Force
 
-        # === Extract failure message ===
-        $msg = if ($hasFailure) { $tcNode.failure.InnerText.Trim() } elseif ($hasError) { $tcNode.error.InnerText.Trim() } else { 'Unknown failure' }
-
-        # === Write .txt file ===
+        # --- extract message & save .txt ---
+        $msg     = ($hasFailure ? $tcNode.failure.InnerText.Trim() : $tcNode.error.InnerText.Trim())
         $txtName = $xmlFile.Name.Replace('.xml', '.txt')
         $txtPath = Join-Path $failDir $txtName
 
@@ -144,11 +137,10 @@ steps:
         )
         $lines | Set-Content -Path $txtPath
 
-        $uncTxt = "$networkBasePath\$targetTestCaseName\$txtName"
-        Write-Host "📄 Failure reason saved: $uncTxt"
+        Write-Host "📄 Failure details saved at: $txtPath"
+        Write-Host "🔗 UNC link: $networkBasePath\$targetTestCaseName\$txtName"
 
-        # ❗ Fail pipeline
-        exit 1
+        exit 1   # Fail the task/pipeline when the testcase fails
       }
       else {
         Write-Host "✅ Test case '$targetTestCaseName' PASSED."
