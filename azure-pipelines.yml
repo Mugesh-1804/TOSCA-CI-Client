@@ -1,26 +1,23 @@
 trigger: none  # Manual trigger only
-  
-# Step 1: Accept user input at runtime
+
+# Step 1: Define Variables and Variable Groups
+variables:
+  - group: ToscaSecrets  # Reference to the variable group that stores secrets like clientSecret
+  testCaseName: '$(TestCaseName)'  # Reference to pipeline-level or runtime variables
+  testEvent: '$(TestEventName)'  # Reference to pipeline-level or runtime variables
+  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
+  projectName: 'Tosca_PattersonAutomation'
+  clientId: '-4m_zGxoBESTvMw7zvlmjg'
+  clientSecret: '$(toscaClientSecret)'  # Using the secret from the variable group
+
+# Step 2: Accept user input at runtime (parameters)
 parameters:
   - name: testCaseName
     type: string
-    default: '$(TestCaseName)'
-
+    default: '$(TestCaseName)'  # Default value from pipeline-level variable
   - name: testEvent
     type: string
-    default: '$(TestEventName)'
-
-# Step 2: Map parameters to variables for runtime use
-variables:
-  - group: ToscaSecrets
-   toscaServerUrl: '$(clientId)'
-  projectName: '$(projectName)'
-  clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
-  sharePassword: '$(sharePassword)'
-  shareUsername: '$(shareUsername)'
-  toscaClientSecret: '$(toscaClientSecret)'
-  toscaServerUrl: '$(toscaServerUrl)'
+    default: '$(TestEventName)'  # Default value from pipeline-level variable
 
 # Step 3: Use a self-hosted Tosca agent pool
 pool:
