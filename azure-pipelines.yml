@@ -37,29 +37,22 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-     # Read variables from Azure DevOps
-$User = "$(shareUsername)"
-$PlainPassword = "$(sharePassword)"
+      $username = "$(shareUsername)"
+      $password = "$(sharePassword)" | ConvertTo-SecureString -AsPlainText -Force
+      $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
 
-# Convert password to secure string
-$SecurePassword = ConvertTo-SecureString $PlainPassword -AsPlainText -Force
-$Credential = New-Object System.Management.Automation.PSCredential ($User, $SecurePassword)
+      $testCase = "$env:testCaseName"
+      $buildNumber = $env:BUILD_BUILDNUMBER
 
-# Optional: Map the network drive
-$NetworkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
-$DriveLetter = "Z:"
+      $networkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
+      $sourceRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
+      $targetRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
 
-New-PSDrive -Name "Z" -PSProvider FileSystem -Root $NetworkPath -Credential $Credential -Persist
+      # Map a drive temporarily
+      New-PSDrive -Name "Z" -PSProvider FileSystem -Root $networkPath -Credential $credential -Persist
 
-# Perform the file copy
-$sourcePath = "C:\Path\To\Your\ToscaReport.html"
-$buildNumber = "$(Build.BuildNumber)"
-$targetPath = "Z:\Projects\JenkinsTestCases\Deals\Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX-$buildNumber.html"
-
-Copy-Item -Path $sourcePath -Destination $targetPath -Force
-
-# Clean up
-Remove-PSDrive -Name "Z"
+      $sourcePath = "Z:\$sourceRelPath"
+      $targetPath = "Z:\$targetRelPath"
 
       if (Test-Path $sourcePath) {
           Copy-Item -Path $sourcePath -Destination $targetPath -Force
@@ -67,6 +60,9 @@ Remove-PSDrive -Name "Z"
       } else {
           Write-Host "⚠️ Report not found at: $sourcePath"
       }
+
+      # Clean up
+      Remove-PSDrive -Name "Z"
 
 # Step 6: Generate UNC report link and save as Markdown
 - task: PowerShell@2
