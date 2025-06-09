@@ -1,13 +1,4 @@
 trigger: none  # Manual trigger only
-
-variables:
-  - group: ToscaSecrets
-  testCaseName: '${testCaseName}'
-  testEvent: '${testEventName}'
-  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
-  projectName: 'Tosca_PattersonAutomation'
-  clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
   
 # Step 1: Accept user input at runtime
 parameters:
@@ -18,6 +9,18 @@ parameters:
   - name: testEvent
     type: string
     default: '$(TestEventName)'
+
+# Step 2: Map parameters to variables for runtime use
+variables:
+  - group: ToscaSecrets
+   toscaServerUrl: '$(clientId)'
+  projectName: '$(projectName)'
+  clientId: '-4m_zGxoBESTvMw7zvlmjg'
+  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
+  sharePassword: '$(sharePassword)'
+  shareUsername: '$(shareUsername)'
+  toscaClientSecret: '$(toscaClientSecret)'
+  toscaServerUrl: '$(toscaServerUrl)'
 
 # Step 3: Use a self-hosted Tosca agent pool
 pool:
