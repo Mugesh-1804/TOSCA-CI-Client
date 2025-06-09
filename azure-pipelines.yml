@@ -1,28 +1,16 @@
 trigger: none  # Manual trigger only
 
-# Step 1: Define Variables and Variable Groups
+# Step 1: Link the variable group
 variables:
-  # Use a variable group to reference shared secrets
-  group: ToscaSecrets  # This links the variable group to your pipeline
-  
-  # Define additional variables
-  testCaseName: '$(TestCaseName)'  # Reference to pipeline-level or runtime variables
-  testEvent: '$(TestEventName)'  # Reference to pipeline-level or runtime variables
-  toscaServerUrl: '$(toscaServerUrl)'
-  projectName: '$(projectName)'
-  clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  shareUsername: '$(shareUsername)'
-  sharePassword: '$(sharePassword)'
-  clientSecret: '$(toscaClientSecret)'  # Using the secret from the variable group
+  - group: ToscaSecrets  # This will import all variables from the ToscaSecrets group
 
 # Step 2: Accept user input at runtime (parameters)
 parameters:
   - name: testCaseName
     type: string
-    default: '$(TestCaseName)'  # Default value from pipeline-level variable
+
   - name: testEvent
     type: string
-    default: '$(TestEventName)'  # Default value from pipeline-level variable
 
 # Step 3: Use a self-hosted Tosca agent pool
 pool:
