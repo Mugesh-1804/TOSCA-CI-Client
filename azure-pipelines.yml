@@ -2,6 +2,12 @@ trigger: none  # Manual trigger only
 
 variables:
   - group: ToscaSecrets
+  testCaseName: ${{ parameters.testCaseName }}
+  testEvent: ${{ parameters.testEvent }}
+  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
+  projectName: 'Tosca_PattersonAutomation'
+  clientId: '-4m_zGxoBESTvMw7zvlmjg'
+  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
   
 # Step 1: Accept user input at runtime
 parameters:
@@ -12,15 +18,6 @@ parameters:
   - name: testEvent
     type: string
     default: '$(TestEventName)'
-
-# Step 2: Map parameters to variables for runtime use
-variables:
-  testCaseName: ${{ parameters.testCaseName }}
-  testEvent: ${{ parameters.testEvent }}
-  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
-  projectName: 'Tosca_PattersonAutomation'
-  clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
 
 # Step 3: Use a self-hosted Tosca agent pool
 pool:
