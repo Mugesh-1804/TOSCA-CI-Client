@@ -37,6 +37,13 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
+      # Define the credentials
+      $username = "$(shareUsername)"  # Enter username
+      $password = ConvertTo-SecureString "$(sharePassword)" -AsPlainText -Force  # Enter password
+      $credential = New-Object System.Management.Automation.PSCredential($username, $password)
+
+      # Map the network drive
+      New-PSDrive -Name "ToscaShare" -PSProvider FileSystem -Root "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence" -Credential $credential -Persist
       $testCase = "$env:testCaseName"
       $buildNumber = $env:BUILD_BUILDNUMBER
 
