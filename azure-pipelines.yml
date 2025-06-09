@@ -9,16 +9,18 @@ parameters:
     type: string
     default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'  # Default value
 
+# Step 2: Define variables (no '-' used here)
 variables:
   # Import secrets from variable group
   - group: ToscaSecrets
-  # Define variables
+  
+  # Define other variables here without '-'
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
   clientSecret: '$(clientSecret)'  # secret variable
 
-# Step 2: Use a self-hosted Tosca agent pool
+# Step 3: Use a self-hosted Tosca agent pool
 pool:
   name: 'TOSCA CI'
 
