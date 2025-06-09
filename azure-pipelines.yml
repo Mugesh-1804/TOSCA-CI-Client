@@ -64,69 +64,104 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      $reportFolder = "C:\tmp\ExecutionClients\results"
-      $targetTestCaseName = "$(testCaseName)"
-      $buildNumber = $env:BUILD_BUILDNUMBER
-      $failureOutputBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
-      $networkBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
-      $passResultPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
+        # === CONFIGURATION ===
+            $reportFolder = "C:\tmp\ExecutionClients\results"
+            $targetTestCaseName = "Deals_USDen_EligibleSalesOrg_BuyX_GetY"
+            $failureOutputBasePath = "D:\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
+            $networkBasePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\FailureReasons"
+            $buildNumber = $env:BUILD_BUILDNUMBER
+            $passResultPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$targetTestCaseName\$targetTestCaseName-$buildNumber.html"
 
-      $xmlFiles = Get-ChildItem -Path $reportFolder -Filter "*_results.xml"
-      $xmlFile = $xmlFiles | Where-Object { (Get-Content $_.FullName) -match $targetTestCaseName } | Select-Object -First 1
+      # === Find Execution ID from Log ===
+            $logPath = "$env:BUILD_ARTIFACTSTAGINGDIRECTORY\..\..\_temp\buildlog.txt"
+            if (-not (Test-Path $logPath)) {
+              Write-Host "⚠️ Build log file not found: $logPath"
+              return
+            }
+            $logContent = Get-Content $logPath
+            $executionId = $null
+            foreach ($line in $logContent) {
+                if ($line -match 'Successfully enqueued execution with id "(.*?)"') {
+                    $executionId = $matches[1]
+                break
+                }
+            }
+            if (-not $executionId) {
+                Write-Host "❌ Execution ID not found in logs."
+            return
+            }
+            Write-Host "✅ Execution ID found: $executionId"
 
-      if (-not $xmlFile) {
-          Write-Host "❌ No matching XML file found in $reportFolder for '$targetTestCaseName'"
-          exit 1
-      }
+      # === Find Corresponding XML File ===
+            $xmlFile = Get-ChildItem -Path $reportFolder -Filter "*$executionId*_results.xml" | Select-Object -First 1
+            if (-not $xmlFile) {
+                Write-Host "❌ No XML report found for Execution ID: $executionId"
+                return
+            }
+            Write-Host "✅ Found XML report: $($xmlFile.FullName)"
 
-      [xml]$xml = Get-Content $xmlFile.FullName
-      $testCaseNode = $xml.SelectSingleNode("//testcase[@name='$targetTestCaseName']")
+      # === Load XML ===
+            [xml]$xml = Get-Content $xmlFile.FullName
 
-      if (-not $testCaseNode) {
-          Write-Host "❌ Test case '$targetTestCaseName' not found in XML."
-          exit 1
-      }
+      # === Locate the Test Case Node ===
+            $targetTestCase = $xml.SelectNodes("//testcase") | Where-Object { $_.name -eq $targetTestCaseName }
 
-      $hasFailure = $testCaseNode.failure
-      $hasError = $testCaseNode.error
+            if (-not $targetTestCase) {
+                Write-Host "❌ Test case '$targetTestCaseName' not found in results."
+            return
+            }
 
-      if ($hasFailure -or $hasError) {
-          Write-Host "❌ Test case '$targetTestCaseName' FAILED."
+            $hasFailure = $targetTestCase.failure -ne $null
+            $hasError = $targetTestCase.error -ne $null
 
+            if ($hasFailure -or $hasError) {
+                Write-Host "❌ Test case '$targetTestCaseName' FAILED."
+
+      # === Save Failure Output ===
           $failureDir = Join-Path $failureOutputBasePath $targetTestCaseName
           if (-not (Test-Path $failureDir)) {
               New-Item -Path $failureDir -ItemType Directory | Out-Null
           }
 
-          $xmlCopyPath = Join-Path $failureDir $xmlFile.Name
-          Copy-Item -Path $xmlFile.FullName -Destination $xmlCopyPath -Force
+          $destXml = Join-Path $failureDir $xmlFile.Name
+          Copy-Item -Path $xmlFile.FullName -Destination $destXml -Force
 
-          $failureText = ""
-          if ($hasFailure) { $failureText = $testCaseNode.failure.InnerText.Trim() }
-          elseif ($hasError) { $failureText = $testCaseNode.error.InnerText.Trim() }
-          else { $failureText = "Unknown failure" }
+          $failureText = if ($hasFailure) {
+                $targetTestCase.failure.InnerText.Trim()
+          } elseif ($hasError) {
+                $targetTestCase.error.InnerText.Trim()
+          } else {
+                "Unknown failure"
+          }
 
-          $txtFile = $xmlFile.Name.Replace(".xml", ".txt")
-          $txtPath = Join-Path $failureDir $txtFile
+          $txtPath = $xmlFile.Name.Replace(".xml", ".txt")
+          $destTxt = Join-Path $failureDir $txtPath
 
-          $lines = @(
-              "TestCaseName: $targetTestCaseName",
-              "BuildNumber: $buildNumber",
-              "",
-              "Failure Reason:",
-              "$failureText"
-          )
-          $lines | Set-Content -Path $txtPath
+          Set-Content -Path $destTxt -Value @"
+          TestCaseName: $targetTestCaseName
+          BuildNumber: $buildNumber
 
-          $uncTxtPath = "$networkBasePath\$targetTestCaseName\$txtFile"
-          $markdown = "[View Failure Reason]($uncTxtPath)"
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
-      }
-      else {
-          Write-Host "✅ Test case '$targetTestCaseName' PASSED."
-          $markdown = "[Open Tosca Report]($passResultPath)"
-          Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
-      }
+          Failure Reason:
+          $failureText
+          "@
+
+              $uncLink = "$networkBasePath\$targetTestCaseName\$txtPath"
+              $htmlLink = "📄 <a href='$uncLink'>Click here to View Failure Result</a>"
+
+              Write-Host "`n$htmlLink`n"
+
+              # === ❗ Optional: Fail the pipeline ===
+              # Uncomment the next line if you want to fail the Azure DevOps step on Tosca failure:
+              exit 1
+            }
+            else {
+                Write-Host "✅ Test case '$targetTestCaseName' PASSED."
+                Write-Host "`n📄 View Result HTML: $passResultPath`n"
+
+                $htmlLink = "📄 <a href='$passResultPath'>Click here for Result</a>"
+                Write-Host "$htmlLink"
+            }
+
 
 # Step 4: Publish Report Link Markdown
 - task: PublishPipelineArtifact@1
