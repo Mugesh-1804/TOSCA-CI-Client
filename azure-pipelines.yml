@@ -4,11 +4,11 @@ trigger: none  # Manual trigger only
 parameters:
   - name: testCaseName
     type: string
-    default: 'Enter Test Case Name'
+    default: '$(TestCaseName)'
 
   - name: testEvent
     type: string
-    default: 'Enter Test Event Name'
+    default: '$(TestEventName)'
 
 # Step 2: Map parameters to variables for runtime use
 variables:
