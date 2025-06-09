@@ -164,18 +164,16 @@ steps:
       $mdPath = Join-Path $mdDir "ToscaReport.md"
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $resultLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
-      
-      $markdown = @"
-## Tosca Test Case Result
+      $resultLink = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
 
-- **Test Case:** $testCase  
-- **Build Number:** $buildNum  
-- **Result Link:** [$testCase Report]($resultLink)
-"@
-
-      # Write markdown to file
-      $markdown | Set-Content -Path $mdPath -Encoding UTF8
+      $markdownLines = @(
+        "## Tosca Test Case Result",
+        "",
+        "**Test Case:** $testCase  ",
+        "**Build Number:** $buildNum  ",
+        "**Result Link:** [$testCase Report]($resultLink)"
+      )
+      $markdownLines | Set-Content -Path $mdPath -Encoding UTF8
 
       Write-Host "✅ Markdown file created at $mdPath"
 
