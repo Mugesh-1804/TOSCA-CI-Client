@@ -4,14 +4,14 @@ variables:
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
+  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # Use secret from variable group
 
 pool:
   name: 'TOSCA CI'
 
 steps:
 
-# Step 1: Run the Tosca Test Event
+# Step 1: Run Tosca Test Event
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
   timeoutInMinutes: 240
@@ -26,9 +26,9 @@ steps:
       -clientSecret "$(clientSecret)"
       -testCaseName "$(testCaseName)"
 
-# Step 2: Copy and Rename Tosca HTML Report with Build Number
+# Step 2: Copy and Rename Tosca Report with Build Number
 - task: PowerShell@2
-  displayName: 'Copy & Rename Tosca HTML Report'
+  displayName: 'Copy and Rename Tosca Report with Build Number'
   condition: always()
   inputs:
     targetType: 'inline'
@@ -37,7 +37,7 @@ steps:
       $password = "$(sharePassword)" | ConvertTo-SecureString -AsPlainText -Force
       $credential = New-Object System.Management.Automation.PSCredential ($username, $password)
 
-      $testCase = "$(testCaseName)"
+      $testCase = "$env:testCaseName"
       $buildNumber = $env:BUILD_BUILDNUMBER
 
       $networkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
@@ -45,7 +45,6 @@ steps:
       $targetRelPath = "Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
 
       New-PSDrive -Name "Z" -PSProvider FileSystem -Root $networkPath -Credential $credential -Persist
-
       $sourcePath = "Z:\$sourceRelPath"
       $targetPath = "Z:\$targetRelPath"
 
@@ -58,7 +57,7 @@ steps:
 
       Remove-PSDrive -Name "Z"
 
-# Step 3: Analyze Tosca XML and Handle Failure
+# Step 3: Analyze Tosca Execution XML
 - task: PowerShell@2
   displayName: 'Analyze Tosca Execution XML'
   condition: always()
@@ -110,15 +109,14 @@ steps:
           $txtFile = $xmlFile.Name.Replace(".xml", ".txt")
           $txtPath = Join-Path $failureDir $txtFile
 
-          $output = @"
-TestCaseName: $targetTestCaseName
-BuildNumber: $buildNumber
-
-Failure Reason:
-$failureText
-"@
-
-          $output | Set-Content -Path $txtPath
+          $lines = @(
+              "TestCaseName: $targetTestCaseName",
+              "BuildNumber: $buildNumber",
+              "",
+              "Failure Reason:",
+              "$failureText"
+          )
+          $lines | Set-Content -Path $txtPath
 
           $uncTxtPath = "$networkBasePath\$targetTestCaseName\$txtFile"
           $markdown = "[View Failure Reason]($uncTxtPath)"
@@ -130,9 +128,9 @@ $failureText
           Set-Content -Path "$(Build.ArtifactStagingDirectory)\ToscaReport.md" -Value $markdown
       }
 
-# Step 4: Publish Markdown Report Link
+# Step 4: Publish Report Link Markdown
 - task: PublishPipelineArtifact@1
-  displayName: 'Publish Tosca Report Markdown'
+  displayName: 'Publish Tosca Report Link'
   condition: always()
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)\ToscaReport.md'
