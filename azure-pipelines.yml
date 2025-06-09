@@ -37,18 +37,29 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      # Define the credentials
-      $username = "$(shareUsername)"  # Enter username
-      $password = ConvertTo-SecureString "$(sharePassword)" -AsPlainText -Force  # Enter password
-      $credential = New-Object System.Management.Automation.PSCredential($username, $password)
+     # Read variables from Azure DevOps
+$User = "$(shareUsername)"
+$PlainPassword = "$(sharePassword)"
 
-      # Map the network drive
-      New-PSDrive -Name "ToscaShare" -PSProvider FileSystem -Root "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence" -Credential $credential -Persist
-      $testCase = "$env:testCaseName"
-      $buildNumber = $env:BUILD_BUILDNUMBER
+# Convert password to secure string
+$SecurePassword = ConvertTo-SecureString $PlainPassword -AsPlainText -Force
+$Credential = New-Object System.Management.Automation.PSCredential ($User, $SecurePassword)
 
-      $sourcePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase.html"
-      $targetPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNumber.html"
+# Optional: Map the network drive
+$NetworkPath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence"
+$DriveLetter = "Z:"
+
+New-PSDrive -Name "Z" -PSProvider FileSystem -Root $NetworkPath -Credential $Credential -Persist
+
+# Perform the file copy
+$sourcePath = "C:\Path\To\Your\ToscaReport.html"
+$buildNumber = "$(Build.BuildNumber)"
+$targetPath = "Z:\Projects\JenkinsTestCases\Deals\Deals_CanadaDen_EligibleSalesOrg_BuyX_GetX-$buildNumber.html"
+
+Copy-Item -Path $sourcePath -Destination $targetPath -Force
+
+# Clean up
+Remove-PSDrive -Name "Z"
 
       if (Test-Path $sourcePath) {
           Copy-Item -Path $sourcePath -Destination $targetPath -Force
