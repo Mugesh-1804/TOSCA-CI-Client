@@ -38,7 +38,7 @@ steps:
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "'$(TestCaseName)'"
+      -testCaseName "${{ parameters.testCaseName }}"
 
 # Step 5: Rename Tosca report with build number
 - task: PowerShell@2
