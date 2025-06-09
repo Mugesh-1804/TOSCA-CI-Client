@@ -3,7 +3,7 @@ trigger: none  # Manual trigger only
 # Step 1: Define Variables and Variable Groups
 variables:
   # Use a variable group to reference shared secrets
-  - group: ToscaSecrets  # This links the variable group to your pipeline
+  group: ToscaSecrets  # This links the variable group to your pipeline
   
   # Define additional variables
   testCaseName: '$(TestCaseName)'  # Reference to pipeline-level or runtime variables
