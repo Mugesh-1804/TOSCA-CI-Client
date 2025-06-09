@@ -4,7 +4,7 @@ trigger: none  # Manual trigger only
 parameters:
   - name: testCaseName
     type: string
-    default: '$(TestCaseName)'
+    
 
   - name: testEvent
     type: string
