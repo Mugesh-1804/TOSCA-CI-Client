@@ -4,22 +4,21 @@ trigger: none  # Manual trigger only
 parameters:
   - name: testCaseName
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'  # Default value
+    default: '$(TestCaseName)'
+
   - name: testEvent
     type: string
-    default: 'Deals_CanadaDen_EligibleSalesOrg_BuyX_GetY'  # Default value
+    default: '$(TestEventName)'
 
-# Step 2: Define variables (do not use `-` for individual key-value pairs)
+# Step 2: Map parameters to variables for runtime use
 variables:
-  # Import secrets from variable group
-  - group: ToscaSecrets
-  
-  # Define other variables here without '-'
+  testCaseName: ${{ parameters.testCaseName }}
+  testEvent: ${{ parameters.testEvent }}
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '$(clientSecret)'  # secret variable
-  
+  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # From variable group (secret)
+
 # Step 3: Use a self-hosted Tosca agent pool
 pool:
   name: 'TOSCA CI'
@@ -39,7 +38,7 @@ steps:
       -projectName "$(projectName)"
       -clientId "$(clientId)"
       -clientSecret "$(clientSecret)"
-      -testCaseName "$(testCaseName)"  # Use the runtime parameter value
+      -testCaseName "$(testCaseName)"
 
 # Step 5: Rename Tosca report with build number
 - task: PowerShell@2
