@@ -150,10 +150,10 @@ steps:
         New-Item -ItemType Directory -Path $mdDir | Out-Null
       }
 
-      $mdPath = Join-Path $mdDir "$testCase-$buildNum.md"
+      $mdPath = Join-Path $mdDir "ToscaReport.md"
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $resultLink = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
+      $resultLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
 
       $markdownLines = @(
         "## Tosca Test Case Result",
@@ -166,10 +166,40 @@ steps:
 
       Write-Host "✅ Markdown file created at $mdPath"
 
-# Step 5: Publish Report Link Markdown
+# Step 5: Publish Markdown Artifact
 - task: PublishPipelineArtifact@1
-  displayName: 'Publish Tosca Report Link'
+  displayName: 'Publish Tosca Report Markdown'
   condition: always()
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)\$testCase-$buildNum.md'
+    targetPath: '$(Build.ArtifactStagingDirectory)\ToscaReport.md'
     artifact: 'ToscaReportMarkdown'
+
+# Step 6: Embed HTML Report in Summary Tab
+- task: PowerShell@2
+  displayName: 'Embed Tosca HTML Report in Summary'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $testCase = "$(testCaseName)"
+      $buildNum = "$(Build.BuildNumber)"
+      $webLink = "https://tosca.corp.pattersoncompanies.com/sap_automation_test_evidence/Projects/JenkinsTestCases/Deals/$testCase/$testCase-$buildNum.html"
+
+      $summaryDir = "$(Pipeline.Workspace)\.pipeline"
+      if (-not (Test-Path $summaryDir)) {
+        New-Item -ItemType Directory -Path $summaryDir | Out-Null
+      }
+
+      $summaryPath = Join-Path $summaryDir "ToscaSummary.md"
+      @"
+## ✅ Tosca HTML Report Summary
+
+**Test Case:** $testCase  
+**Build Number:** $buildNum  
+
+🔗 [Click here to view Tosca HTML Report]($webLink)
+
+<iframe src='$webLink' width='100%' height='600px'></iframe>
+"@ | Set-Content -Path $summaryPath -Encoding UTF8
+
+      Write-Host "##vso[task.uploadsummary]$summaryPath"
