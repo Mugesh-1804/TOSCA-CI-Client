@@ -1,19 +1,20 @@
 trigger: none  # Manual trigger only
 
 variables:
-- group: ToscaSecrets  # Secure values like shareUsername, sharePassword, clientSecret
+  - group: ToscaSecrets  # This pulls in shareUsername and sharePassword securely
   - name: toscaServerUrl
     value: 'https://tosca.corp.pattersoncompanies.com'
   - name: projectName
     value: 'Tosca_PattersonAutomation'
   - name: clientId
-    value: '-4m_zGxoBESTvMw7zvlmjg'  
+    value: '-4m_zGxoBESTvMw7zvlmjg'
+  - name: clientSecret
+    value: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'
 
 pool:
   name: 'TOSCA CI'
 
 steps:
-
 # Step 1: Run Tosca Test Event
 - task: PowerShell@2
   displayName: 'Run Tosca Test Event'
