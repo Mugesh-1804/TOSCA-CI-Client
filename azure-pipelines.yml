@@ -184,7 +184,7 @@ steps:
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
       $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
-
+      
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
         New-Item -ItemType Directory -Path $summaryDir | Out-Null
@@ -198,20 +198,44 @@ steps:
       $lines += "**Test Case:** $testCase  "
       $lines += "**Build Number:** $buildNum  "
       $lines += ""
-      $lines += "🔗 [Click here to view Tosca HTML Report]($uncPath)"
+      $lines += "**Shared Report Path:**"
+      $lines += "```"
+      $lines += "$uncPath"
+      $lines += "```"
       $lines += ""
-      $lines += "````html"
-      $lines += "<iframe src='$uncPath' width='100%' height='600px'></iframe>"
-      $lines += "````"
-
       $lines | Set-Content -Path $summaryPath -Encoding UTF8
 
       Write-Host "##vso[task.uploadsummary]$summaryPath"
 
-# Step 7: Publish Tosca HTML Report as Artifact
+# Step 7: Copy Tosca HTML Report to Local and Publish as Artifact
+- task: PowerShell@2
+  displayName: 'Copy Tosca HTML Report to Local Temp'
+  condition: always()
+  inputs:
+    targetType: 'inline'
+    script: |
+      $testCase = "$(testCaseName)"
+      $buildNum = "$(Build.BuildNumber)"
+      $sourcePath = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
+      $localDir = "$(Build.ArtifactStagingDirectory)\ToscaReport"
+
+      if (-not (Test-Path $localDir)) {
+        New-Item -Path $localDir -ItemType Directory | Out-Null
+      }
+
+      $localCopy = Join-Path $localDir "$testCase-$buildNum.html"
+
+      if (Test-Path $sourcePath) {
+        Copy-Item -Path $sourcePath -Destination $localCopy -Force
+        Write-Host "✅ Copied report to: $localCopy"
+      } else {
+        Write-Host "❌ Report not found at: $sourcePath"
+        exit 1
+      }
+
 - task: PublishPipelineArtifact@1
   displayName: 'Publish Tosca HTML Report'
   condition: always()
   inputs:
-    targetPath: '\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$(testCaseName)\\$testCasename-$buildNum.html'
+    targetPath: '$(Build.ArtifactStagingDirectory)\ToscaReport'
     artifact: 'ToscaHtmlReport'
