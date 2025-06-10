@@ -150,7 +150,7 @@ steps:
         New-Item -ItemType Directory -Path $mdDir | Out-Null
       }
 
-      $mdPath = Join-Path $mdDir "ToscaReport.md"
+      $mdPath = Join-Path $mdDir "$testCase-$buildNum.md"
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
       $resultLink = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
@@ -171,5 +171,5 @@ steps:
   displayName: 'Publish Tosca Report Link'
   condition: always()
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)\ToscaReport.md'
+    targetPath: '$(Build.ArtifactStagingDirectory)\$testCase-$buildNum.md'
     artifact: 'ToscaReportMarkdown'
