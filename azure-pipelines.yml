@@ -30,10 +30,7 @@ steps:
       -testCaseName "$(testCaseName)"
 
 # Step 2: Copy and Rename Tosca Report with Build Number
-variables:
-- group: ToscaSecrets  # Replace with your variable group name
 
-steps:
 - task: PowerShell@2
   displayName: 'Copy and Rename Tosca Report with Build Number'
   condition: always()
