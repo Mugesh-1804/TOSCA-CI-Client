@@ -184,7 +184,7 @@ steps:
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
       $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
-      
+
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
         New-Item -ItemType Directory -Path $summaryDir | Out-Null
@@ -199,10 +199,11 @@ steps:
       $lines += "**Build Number:** $buildNum  "
       $lines += ""
       $lines += "**Shared Report Path:**"
-      $lines += "```"
+      $lines += '```'
       $lines += "$uncPath"
-      $lines += "```"
+      $lines += '```'
       $lines += ""
+
       $lines | Set-Content -Path $summaryPath -Encoding UTF8
 
       Write-Host "##vso[task.uploadsummary]$summaryPath"
