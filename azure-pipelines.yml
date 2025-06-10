@@ -5,7 +5,7 @@ variables:
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
   clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # Use secret from variable group
-  - group: ToscaSecrets  # Replace with your variable group name
+  
 
 pool:
   name: 'TOSCA CI'
@@ -28,6 +28,10 @@ steps:
       -testCaseName "$(testCaseName)"
 
 # Step 2: Copy and Rename Tosca Report with Build Number
+variables:
+- group: ToscaSecrets  # Replace with your variable group name
+
+steps:
 - task: PowerShell@2
   displayName: 'Copy and Rename Tosca Report with Build Number'
   condition: always()
