@@ -1,11 +1,11 @@
 trigger: none  # Manual trigger only
 
 variables:
-- group: ToscaSecrets  # Replace with your variable group name
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
   clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # Use secret from variable group
+  - group: ToscaSecrets  # Replace with your variable group name
 
 pool:
   name: 'TOSCA CI'
