@@ -183,25 +183,41 @@ steps:
     script: |
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $webLink = "https:\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
 
+      # UNC and Web Paths
+      $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
+      $webPath = "file://tosca.corp.pattersoncompanies.com/sap_automation_test_evidence/Projects/JenkinsTestCases/Deals/$testCase/$testCase-$buildNum.html"
+
+      # Create summary directory
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
         New-Item -ItemType Directory -Path $summaryDir | Out-Null
       }
 
+      # Prepare summary markdown
       $summaryPath = Join-Path $summaryDir "ToscaSummary.md"
-
       $lines = @()
       $lines += "## ✅ Tosca HTML Report Summary"
       $lines += ""
       $lines += "**Test Case:** $testCase  "
       $lines += "**Build Number:** $buildNum  "
       $lines += ""
-      $lines += "🔗 [Click here to view Tosca HTML Report]($webLink)"
+      $lines += "**UNC Path:**"
+      $lines += "```"
+      $lines += "$uncPath"
+      $lines += "```"
       $lines += ""
-      $lines += "<iframe src='$webLink' width='100%' height='600px'></iframe>"
+      $lines += "_📎 Copy the above path into File Explorer or Run dialog to access the report._"
 
       $lines | Set-Content -Path $summaryPath -Encoding UTF8
 
+      Write-Host "✅ Summary markdown created at $summaryPath"
       Write-Host "##vso[task.uploadsummary]$summaryPath"
+
+# Step 7: Publish Tosca HTML Report as Artifact
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Tosca HTML Report'
+  condition: always()
+  inputs:
+    targetPath: '\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$(testCaseName)'
+    artifact: 'ToscaHtmlReport'
