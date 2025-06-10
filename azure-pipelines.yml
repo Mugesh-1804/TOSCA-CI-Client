@@ -191,7 +191,8 @@ steps:
       }
 
       $summaryPath = Join-Path $summaryDir "ToscaSummary.md"
-      @"
+
+      $iframeHtml = @"
 ## ✅ Tosca HTML Report Summary
 
 **Test Case:** $testCase  
@@ -200,6 +201,8 @@ steps:
 🔗 [Click here to view Tosca HTML Report]($webLink)
 
 <iframe src='$webLink' width='100%' height='600px'></iframe>
-"@ | Set-Content -Path $summaryPath -Encoding UTF8
+"@
+
+      $iframeHtml | Set-Content -Path $summaryPath -Encoding UTF8
 
       Write-Host "##vso[task.uploadsummary]$summaryPath"
