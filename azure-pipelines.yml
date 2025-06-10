@@ -1,7 +1,7 @@
 trigger: none  # Manual trigger only
 
 variables:
-  - group: ToscaSecrets  # This pulls in shareUsername and sharePassword securely
+  - group: ToscaSecrets  # This pulls in toscaServerUrl,clientSecret,clientID,projectName,shareUsername and sharePassword securely
 
 pool:
   name: 'TOSCA CI'
@@ -53,14 +53,6 @@ steps:
       }
 
       Remove-PSDrive -Name "Z"
-
-- task: PowerShell@2
-  displayName: 'Wait for 20 seconds'
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host "Waiting for 20 seconds..."
-      Start-Sleep -Seconds 20
 
 # Step 3: Analyze Tosca Execution XML
 - task: PowerShell@2
