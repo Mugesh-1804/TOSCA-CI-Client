@@ -1,11 +1,13 @@
 trigger: none  # Manual trigger only
 
 variables:
-  toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
-  projectName: 'Tosca_PattersonAutomation'
-  clientId: '-4m_zGxoBESTvMw7zvlmjg'
-  clientSecret: '8t2ryHp3JkOVrc5837s0AwNVduR3u-AEOV9hY3xU2cfQ'  # Use secret from variable group
-  
+- group: ToscaSecrets  # Secure values like shareUsername, sharePassword, clientSecret
+  - name: toscaServerUrl
+    value: 'https://tosca.corp.pattersoncompanies.com'
+  - name: projectName
+    value: 'Tosca_PattersonAutomation'
+  - name: clientId
+    value: '-4m_zGxoBESTvMw7zvlmjg'  
 
 pool:
   name: 'TOSCA CI'
