@@ -1,6 +1,7 @@
 trigger: none  # Manual trigger only
 
 variables:
+- group: ToscaSecrets  # Replace with your variable group name
   toscaServerUrl: 'https://tosca.corp.pattersoncompanies.com'
   projectName: 'Tosca_PattersonAutomation'
   clientId: '-4m_zGxoBESTvMw7zvlmjg'
