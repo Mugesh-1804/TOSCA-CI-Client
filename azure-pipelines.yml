@@ -183,8 +183,7 @@ steps:
     script: |
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $shareLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
-      $webView = "file://$shareLink"
+      $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
 
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
@@ -199,12 +198,12 @@ steps:
       $lines += "**Test Case:** $testCase  "
       $lines += "**Build Number:** $buildNum  "
       $lines += ""
-      $lines += "🔗 [Click here to view Tosca HTML Report]($webView)"
+      $lines += "**Report Location (copy and open in File Explorer):**"
+      $lines += '```'
+      $lines += "$uncPath"
+      $lines += '```'
       $lines += ""
-      $lines += "**Shared Network Path:**"
-      $lines += '```'
-      $lines += "$shareLink"
-      $lines += '```'
+      $lines += "_Note: Direct clickable links to shared drives are not supported in Azure DevOps UI._"
 
       $lines | Set-Content -Path $summaryPath -Encoding UTF8
 
