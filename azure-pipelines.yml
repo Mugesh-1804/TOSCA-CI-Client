@@ -183,7 +183,7 @@ steps:
     script: |
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $webLink = "\\tosca.corp.pattersoncompanies.com\sap_automation_test_evidence\Projects\JenkinsTestCases\Deals\$testCase\$testCase-$buildNum.html"
+      $webLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
 
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
