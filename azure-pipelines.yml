@@ -183,7 +183,8 @@ steps:
     script: |
       $testCase = "$(testCaseName)"
       $buildNum = "$(Build.BuildNumber)"
-      $uncPath = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
+      $shareLink = "\\\\tosca.corp.pattersoncompanies.com\\sap_automation_test_evidence\\Projects\\JenkinsTestCases\\Deals\\$testCase\\$testCase-$buildNum.html"
+      $webView = "file://$shareLink"
 
       $summaryDir = "$(Pipeline.Workspace)\.pipeline"
       if (-not (Test-Path $summaryDir)) {
@@ -198,11 +199,12 @@ steps:
       $lines += "**Test Case:** $testCase  "
       $lines += "**Build Number:** $buildNum  "
       $lines += ""
-      $lines += "**Shared Report Path:**"
-      $lines += '```'
-      $lines += "$uncPath"
-      $lines += '```'
+      $lines += "🔗 [Click here to view Tosca HTML Report]($webView)"
       $lines += ""
+      $lines += "**Shared Network Path:**"
+      $lines += '```'
+      $lines += "$shareLink"
+      $lines += '```'
 
       $lines | Set-Content -Path $summaryPath -Encoding UTF8
 
